@@ -1,26 +1,25 @@
 {
-  "name": "IDEO-Munich-Particle-Sensors",
-  "nomadName": "IDEO-Münich-Particle-Sensors",
+  "name": "Supply-chain-composite-node",
+  "nomadName": "Supply-chain-composite-node",
   "version": "1.0.0",
-  "description": "IDEO Münich data: Gas, UV, Temperature, Humidity, Motion",
+  "description": "s a composite node that subscribes to three atomic nodes and then notifies a relevant party using twilio and sms.",
   "main": "sensor.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/The-Chanman/nomad-node-particle-integration"
+    "url": "git+https://github.com/The-Chanman/nomad-supply-chain-demo/"
   },
   "author": "Eric Chan <echan@ideo.com>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/The-Chanman/nomad-node-particle-integration/issues"
+    "url": "https://github.com/The-Chanman/nomad-supply-chain-demo/issues"
   },
-  "homepage": "https://github.com/The-Chanman/nomad-node-particle-integration#readme",
+  "homepage": "https://github.com/The-Chanman/nomad-supply-chain-demo#readme",
   "dependencies": {
     "moment": "^2.16.0",
-    "node-fetch": "^1.6.3",
     "nomad-stream": "0.0.6",
-    "particle-api-js": "^6.4.0"
+    "twilio": "^2.11.1"
   }
 }

@@ -1,57 +1,62 @@
 const Nomad = require('nomad-stream')
 const moment = require('moment')
-const fetch = require('node-fetch')
-const Particle = require('particle-api-js')
 
-const credentials = require('./particle-login')
+const credentials = require('./twilio-login.js')
+const phoneNumbers = require('./phone-numbers.js')
 
-const particle = new Particle()
 const nomad = new Nomad()
 
-//Particle Device Setup
-//IDEO Münich
-const deviceID = '370034000f47343432313031'
+//require the Twilio module and create a REST client
+const client = require('twilio')(credentials.accountSid, credentials.authToken)
+
+// device atomic node ids
+const subscriptions = ['QmXeYj4i32SAynbS43jWuJSinVRveZQ7YoMWL9RsfkDE6h', '', '']
 
 let instance = null
 let lastPub = null
-let token
+let notificationBody = ""
+
+const frequency = 15 * 60 * 1000 //15 minutes
+const timeThreshold = 4 * 60 * 60 * 1000 // 4 minutes
+const toNumber = phoneNumbers.toNumber
+const fromNumber = phoneNumbers.fromNumber
 
 const defaultPublishData = { 
-  gas: {
-    data: "",
-    units: "parts per million",
-    time: "",
+  [subscriptions[0]]: {
+    lever: {
+      data: '',
+      time: '',
+      description: '' 
+    }
   },
-  uv: {
-    data: "",
-    units: "nm",
-    time: "",
+  [subscriptions[1]]: {
+    lever: {
+      data: '',
+      time: '',
+      description: '' 
+    }
   },
-  humidity: {
-    data: "",
-    units: "%",
-    time: "",
-  },
-  temperature: {
-    data: "",
-    units: "celsius",
-    time: "",
+  [subscriptions[2]]: {
+    lever: {
+      data: '',
+      time: '',
+      description: '' 
+    }
   }
 }
-const timeBetween = 15 * 60 * 1000 //15 minutes
-const timeThreshold = 4 * 60 * 60 * 1000 // 4 minutes
 
+// How we manager the data
 class DataMaintainer {
   constructor(){
     this.data = defaultPublishData
   }
-  setValue(key, value){
+  setValue(id, key, value){
     let cleanedKey = this.cleanKey(key)
-    if(cleanedKey in this.data){
-      this.data[cleanedKey].data = value.data
-      this.data[cleanedKey].time = value.time
+    if(cleanedKey in this.data[id]){
+      this.data[id][cleanedKey].data = value.data
+      this.data[id][cleanedKey].time = value.time
     } else {
-      this.data[cleanedKey] = value
+      this.data[id][cleanedKey] = value
     }
   }
   cleanKey(key){
@@ -63,7 +68,8 @@ class DataMaintainer {
     return this.data
   }
   isAllFilled(){
-    return this.data["gas"]["data"] && this.data["gas"]["time"] && this.data["uv"]["data"] && this.data["uv"]["time"]
+     ***************************************figure this out later***************************************
+    return this.data[subscriptions[0]]["data"] && this.data[subscriptions[0]]["time"] && this.data["uv"]["data"] && this.data["uv"]["time"]
   }
   clear(){
     this.data = defaultPublishData
@@ -80,59 +86,43 @@ function getTime() {
 //init data manager
 let dataManager = new DataMaintainer()
 
-particle.login(credentials)
-  .then(res => {
-    token = res.body.access_token
-    console.log(`Got Token: ${token}`)
-    return nomad.prepareToPublish()
-  })
-  .then((n) => {
-    instance = n
-    return instance.publishRoot('hello this is IDEO Münich')
-  })
-  .then(() => {
-    //declaring last publish date
-    lastPub = getTime()
-    return particle.getEventStream({ deviceId: deviceID, auth: token })
-  })
-  .then(s => {
-    stream = s
-    stream.on('event', data => {
-      console.log(data)
-      try{dataManager.setValue(data.name, {data: data.data, time: data.published_at})}
-      catch(err){
-        console.log("DataMaintainer failed with error of " + err)
-      }
-      // this determines frequency of transmission 
-      let currentTime = getTime()
-      let timeSince = currentTime - lastPub
-      if (timeSince >= timeBetween){
+lastPub = getTime()
+nomad.subscribe(subscriptions, function(message) {
+  console.log("Receieved a message for node " + message.id)
+  console.log("Message was " + message.message)
+  const messageData = JSON.parse(message.message)
 
-        console.log("timeSince >= timeBetween")
+  try{
+    dataManager.setValue(message.id, <FILL IN WITH KEY>, <FILL IN WITH VALUE>)
+  }
+  catch(err){
+    console.log("DataMaintainer failed with error of " + err)
+  }
+  let currentTime = getTime()
+  let timeSince = currentTime - lastPub
+  if (timeSince >= frequency){
+    console.log('===================================> timeSince >= timeBetween')
+    if (<criteria are met>){
+      console.log("***************************************************************************************")
+      console.log(`we are now going to notify relevant parties since ${<criteria have been met>}`)
+      console.log("***************************************************************************************")
 
-        if (dataManager.isAllFilled){
-          // publish if everything is full
-          console.log("***************************************************************************************")
-          console.log(dataManager.getAll())
-          console.log("***************************************************************************************")
+      notificationBody = `${<What we are going to notify them of>}`
 
-          instance.publish(dataManager.toString())
-            .catch(err => console.log(`Error: ${JSON.stringify(err)}`))
-          dataManager.clear()  
-          lastPub = currentTime
-        }
-      }
-      // if haven't receieved anything in the time frame
-      if (timeSince >= timeThreshold){
-        // publish what we got
-        instance.publish(dataManager.toString())
-          .catch(err => console.log(`Error: ${JSON.stringify(err)}`))
-        console.log("***************************************************************************************")
-        console.log(dataManager.getAll())
-        console.log("***************************************************************************************")
-        dataManager.clear()  
-        lastPub = currentTime
-      }
-    })
-  })
-  .catch(err => console.log(`Error: ${JSON.stringify(err)}`))
+      client.messages.create({
+        to: toNumber,
+        from: fromNumber,
+        body: messageBody,
+      }, function (err, message) {
+        console.log(err)
+        console.log(message)
+      })
+
+      lastPub = currentTime
+    }
+  }
+  if (timeSince >= timeThreshold){
+    // let them know the node is still online
+    <this can be a text or publish if there is a publish then we nned a new variable to kkep track of timesince last publish and on to keep track of the state>
+  }
+})
