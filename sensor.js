@@ -9,20 +9,20 @@ const nomad = new Nomad()
 
 // Particle Device Setup
 // Atomic node 1
-const deviceID =  <This needs to be set>
+const deviceID = '430026001447343432313031'
 
 let instance = null
 let lastPub = null
 let token
 
 const defaultPublishData = { 
-  lever: {
+  sensor: {
     data: "",
     time: "",
-    description: "The state of the lever in region 1"
+    description: "The state of the machine in region 1"
   }
 }
-const timeBetween = 15 * 60 * 1000 //15 minutes
+const timeBetween = 10 * 1000 //15 minutes
 const timeThreshold = 4 * 60 * 60 * 1000 // 4 minutes
 
 class DataMaintainer {
