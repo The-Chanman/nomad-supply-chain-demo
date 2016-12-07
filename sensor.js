@@ -1,62 +1,41 @@
 const Nomad = require('nomad-stream')
 const moment = require('moment')
+const Particle = require('particle-api-js')
 
-const credentials = require('./twilio-login.js')
-const phoneNumbers = require('./phone-numbers.js')
+const credentials = require('./particle-login')
 
+const particle = new Particle()
 const nomad = new Nomad()
 
-//require the Twilio module and create a REST client
-const client = require('twilio')(credentials.accountSid, credentials.authToken)
-
-// device atomic node ids
-const subscriptions = ['QmXeYj4i32SAynbS43jWuJSinVRveZQ7YoMWL9RsfkDE6h', '', '']
+// Particle Device Setup
+// Atomic node 1
+const deviceID =  <This needs to be set>
 
 let instance = null
 let lastPub = null
-let notificationBody = ""
-
-const frequency = 15 * 60 * 1000 //15 minutes
-const timeThreshold = 4 * 60 * 60 * 1000 // 4 minutes
-const toNumber = phoneNumbers.toNumber
-const fromNumber = phoneNumbers.fromNumber
+let token
 
 const defaultPublishData = { 
-  [subscriptions[0]]: {
-    lever: {
-      data: '',
-      time: '',
-      description: '' 
-    }
-  },
-  [subscriptions[1]]: {
-    lever: {
-      data: '',
-      time: '',
-      description: '' 
-    }
-  },
-  [subscriptions[2]]: {
-    lever: {
-      data: '',
-      time: '',
-      description: '' 
-    }
+  lever: {
+    data: "",
+    time: "",
+    description: "The state of the lever in region 1"
   }
 }
+const timeBetween = 15 * 60 * 1000 //15 minutes
+const timeThreshold = 4 * 60 * 60 * 1000 // 4 minutes
 
-// How we manager the data
 class DataMaintainer {
   constructor(){
     this.data = defaultPublishData
   }
-  setValue(id, key, value){
+  setValue(key, value){
     let cleanedKey = this.cleanKey(key)
-    if(cleanedKey in this.data[id]){
-      this.data[id][cleanedKey].data = value.data
-      this.data[id][cleanedKey].time = value.time
+    if(cleanedKey in this.data){
+      this.data[cleanedKey].data = value.data
+      this.data[cleanedKey].time = value.time
     } else {
-      this.data[id][cleanedKey] = value
+      this.data[cleanedKey] = value
     }
   }
   cleanKey(key){
@@ -68,8 +47,7 @@ class DataMaintainer {
     return this.data
   }
   isAllFilled(){
-     ***************************************figure this out later***************************************
-    return this.data[subscriptions[0]]["data"] && this.data[subscriptions[0]]["time"] && this.data["uv"]["data"] && this.data["uv"]["time"]
+    return this.data["lever"]["data"] && this.data["lever"]["time"]
   }
   clear(){
     this.data = defaultPublishData
@@ -86,43 +64,59 @@ function getTime() {
 //init data manager
 let dataManager = new DataMaintainer()
 
-lastPub = getTime()
-nomad.subscribe(subscriptions, function(message) {
-  console.log("Receieved a message for node " + message.id)
-  console.log("Message was " + message.message)
-  const messageData = JSON.parse(message.message)
+particle.login(credentials)
+  .then(res => {
+    token = res.body.access_token
+    console.log(`Got Token: ${token}`)
+    return nomad.prepareToPublish()
+  })
+  .then((n) => {
+    instance = n
+    return instance.publishRoot('hello this atomic node 1 of supply chain demo')
+  })
+  .then(() => {
+    //declaring last publish date
+    lastPub = getTime()
+    return particle.getEventStream({ deviceId: deviceID, auth: token })
+  })
+  .then(s => {
+    stream = s
+    stream.on('event', data => {
+      console.log(data)
+      try{dataManager.setValue(data.name, {data: data.data, time: data.published_at})}
+      catch(err){
+        console.log("DataMaintainer failed with error of " + err)
+      }
+      // this determines frequency of transmission 
+      let currentTime = getTime()
+      let timeSince = currentTime - lastPub
+      if (timeSince >= timeBetween){
 
-  try{
-    dataManager.setValue(message.id, <FILL IN WITH KEY>, <FILL IN WITH VALUE>)
-  }
-  catch(err){
-    console.log("DataMaintainer failed with error of " + err)
-  }
-  let currentTime = getTime()
-  let timeSince = currentTime - lastPub
-  if (timeSince >= frequency){
-    console.log('===================================> timeSince >= timeBetween')
-    if (<criteria are met>){
-      console.log("***************************************************************************************")
-      console.log(`we are now going to notify relevant parties since ${<criteria have been met>}`)
-      console.log("***************************************************************************************")
+        console.log("timeSince >= timeBetween")
 
-      notificationBody = `${<What we are going to notify them of>}`
+        if (dataManager.isAllFilled){
+          // publish if everything is full
+          console.log("***************************************************************************************")
+          console.log(dataManager.getAll())
+          console.log("***************************************************************************************")
 
-      client.messages.create({
-        to: toNumber,
-        from: fromNumber,
-        body: messageBody,
-      }, function (err, message) {
-        console.log(err)
-        console.log(message)
-      })
-
-      lastPub = currentTime
-    }
-  }
-  if (timeSince >= timeThreshold){
-    // let them know the node is still online
-    <this can be a text or publish if there is a publish then we nned a new variable to kkep track of timesince last publish and on to keep track of the state>
-  }
-})
+          instance.publish(dataManager.toString())
+            .catch(err => console.log(`Error: ${JSON.stringify(err)}`))
+          dataManager.clear()  
+          lastPub = currentTime
+        }
+      }
+      // if haven't receieved anything in the time frame
+      if (timeSince >= timeThreshold){
+        // publish what we got
+        instance.publish(dataManager.toString())
+          .catch(err => console.log(`Error: ${JSON.stringify(err)}`))
+        console.log("***************************************************************************************")
+        console.log(dataManager.getAll())
+        console.log("***************************************************************************************")
+        dataManager.clear()  
+        lastPub = currentTime
+      }
+    })
+  })
+  .catch(err => console.log(`Error: ${JSON.stringify(err)}`))

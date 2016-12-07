@@ -1,8 +1,8 @@
 {
-  "name": "Supply-chain-composite-node",
-  "nomadName": "Supply-chain-composite-node",
+  "name": "Supply-chain-atomic-node-1",
+  "nomadName": "Supply-chain-atomic-node-1",
   "version": "1.0.0",
-  "description": "s a composite node that subscribes to three atomic nodes and then notifies a relevant party using twilio and sms.",
+  "description": "Atmoic node one for the supply chain demo",
   "main": "sensor.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -20,6 +20,6 @@
   "dependencies": {
     "moment": "^2.16.0",
     "nomad-stream": "0.0.6",
-    "twilio": "^2.11.1"
+    "particle-api-js": "^6.4.0"
   }
 }
