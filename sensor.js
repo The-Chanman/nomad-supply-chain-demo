@@ -19,7 +19,7 @@ const defaultPublishData = {
   lever: {
     data: "",
     time: "",
-    description: "The state of the lever in region 1"
+    description: "The state of the lever in region 3"
   }
 }
 const timeBetween = 15 * 60 * 1000 //15 minutes
