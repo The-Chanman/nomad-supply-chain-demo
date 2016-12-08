@@ -12,12 +12,12 @@ const client = require('twilio')(credentials.accountSid, credentials.authToken)
 // device atomic node ids
 const subscriptions = ['QmVUYR9yGtzzGfewV4Gi6iitsxWjNQo6o7DeyNbFG5SUA4', 'QmPwoNW2z4zpzT9pbUKAAPCZXERYqGm4bdk2n6FbBGEfWM']
 
-let instance = null
-let lastPub = null
-let notificationBody = ""
+let instance
+let lastPub
+let notificationBody
 
 const frequency = 30 * 1000 // 30 seconds 
-const timeThreshold = 4 * 60 * 60 * 1000 // 4 minutes
+const timeThreshold = 4 * 60 * 60 * 1000 // 4 hours
 const toNumber = phoneNumbers.toNumber
 const fromNumber = phoneNumbers.fromNumber
 
@@ -79,67 +79,72 @@ function getTime() {
 //init data manager
 let dataManager = new DataMaintainer()
 
-lastPub = getTime()
-nomad.subscribe(subscriptions, function(message) {
-  console.log("Receieved a message for node " + message.id)
-  // console.log("Message was " + message.message)
-  let messageData = JSON.parse(message.message)
-  console.log(messageData)
-
-  try{
-    dataManager.setValue(message.id, Object.keys(messageData)[0],{data: messageData[Object.keys(messageData)[0]].data, time: messageData[Object.keys(messageData)[0]].time, description: messageData[Object.keys(messageData)[0]].description})
-  }
-  catch(err){
-    console.log("DataMaintainer failed with error of " + err)
-  }
-  let currentTime = getTime()
-  let timeSince = currentTime - lastPub
-
-  if (timeSince >= frequency){
-    console.log('===================================> timeSince >= timeBetween')
-    console.log(dataManager.toString())
-    let currentRecord = dataManager.getAll()
-    let sensorOneData = currentRecord[Object.keys(currentRecord)[0]]['sensor']["data"]
-    let sensorTwoData = currentRecord[Object.keys(currentRecord)[1]]['sensor']["data"]
-    console.log(sensorOneData)
-    console.log(sensorTwoData)
-    if (sensorOneData == 'Active' && sensorTwoData == 'Fish'){
-      console.log("***************************************************************************************")
-      console.log(`we are now going to notify relevant parties since there is an Active Fish`)
-      console.log("***************************************************************************************")
-
-      notificationBody = `THERE IS AN ACTIVE FISH`
-
-      client.messages.create({
-        to: toNumber,
-        from: fromNumber,
-        body: notificationBody,
-      }, function (err, message) {
-        console.log(err)
-        console.log(message)
-      })
-      dataManager.clear()
-      lastPub = currentTime
-    }
-  }
-  if (timeSince >= timeThreshold){
-    // let them know the node is still online
-   console.log("===================================>   timeSince >= timeThreshold")
-    console.log("***************************************************************************************")
-    console.log('Heartbeat, I Twilio composite node is ALIVE <3')
-    console.log("***************************************************************************************")
-    
-    messageBody = 'Heartbeat, I Twilio composite node is ALIVE <3'
-
-    client.messages.create({
-      to: toNumber,
-      from: fromNumber,
-      body: messageBody,
-    }, function (err, message) {
-      console.log(err)
-      console.log(message)
+nomad.prepareToPublish()
+  .then((n) => {
+    instance = n
+    return instance.publishRoot('Starting up supply chain demo composite')
+  })
+  .then(() => {
+    lastPub = getTime()
+    nomad.subscribe(subscriptions, function(message) {
+      console.log("Receieved a message for node " + message.id)
+      console.log("Message was " + message.message)
+      let messageData = JSON.parse(message.message)
+      try{
+        dataManager.setValue(message.id, Object.keys(messageData)[0],{data: messageData[Object.keys(messageData)[0]].data, time: messageData[Object.keys(messageData)[0]].time, description: messageData[Object.keys(messageData)[0]].description})
+      }
+      catch(err){
+        console.log("DataMaintainer failed with error of " + err)
+      }
+      let currentTime = getTime()
+      let timeSince = currentTime - lastPub
+      if (timeSince >= frequency){
+        console.log('===================================> timeSince >= timeBetween')
+        let currentRecord = dataManager.getAll()
+        let sensorOneData = currentRecord[Object.keys(currentRecord)[0]]['sensor']["data"]
+        let sensorTwoData = currentRecord[Object.keys(currentRecord)[1]]['sensor']["data"]
+        if (sensorOneData == 'Active' && sensorTwoData == 'Fish'){
+          console.log("***************************************************************************************")
+          console.log(`we are now going to notify relevant parties since there is an Active Fish`)
+          console.log("***************************************************************************************")
+          notificationBody = `THERE IS AN ACTIVE FISH. TAKE IMMEDIATE PRECAUTIONARY MEASURES`
+          client.messages.create({
+            to: toNumber,
+            from: fromNumber,
+            body: notificationBody,
+          }, function (err, message) {
+            console.log(err)
+            console.log(message)
+          })
+          instance.publish("There is an active fish! Look! (°ロ°)-☞  " + dataManager.toString())
+            .catch(err => console.log(`Error in publishing timeSince>=timeBetween positive state: ${JSON.stringify(err)}`))
+          dataManager.clear()
+          lastPub = currentTime
+        } else {
+          instance.publish(dataManager.toString())
+            .catch(err => console.log(`Error in publishing timeSince>=timeBetween negative state: ${JSON.stringify(err)}`))
+        }
+      }
+      if (timeSince >= timeThreshold){
+        // let them know the node is still online
+       console.log("===================================>   timeSince >= timeThreshold")
+        console.log("***************************************************************************************")
+        console.log('Heartbeat, I am alive but have not got data in a long time')
+        console.log("***************************************************************************************")
+        messageBody = 'Heartbeat, I am alive but have not got data in a long time'
+        client.messages.create({
+          to: toNumber,
+          from: fromNumber,
+          body: messageBody,
+        }, function (err, message) {
+          console.log(err)
+          console.log(message)
+        })
+        instance.publish('Heartbeat, I am alive but have not got data in a long time')
+          .catch(err => console.log(`Error in publishing timeSince>=timeBetween: ${JSON.stringify(err)}`))
+        dataManager.clear()
+        lastPub = currentTime
+      }
     })
-    dataManager.clear()
-    lastPub = currentTime
-  }
-})
+  })
+  .catch(err => console.log(`Error in main loop: ${JSON.stringify(err)}`))
