@@ -10,13 +10,13 @@ const nomad = new Nomad()
 const client = require('twilio')(credentials.accountSid, credentials.authToken)
 
 // device atomic node ids
-const subscriptions = ['QmVUYR9yGtzzGfewV4Gi6iitsxWjNQo6o7DeyNbFG5SUA4', 'QmPwoNW2z4zpzT9pbUKAAPCZXERYqGm4bdk2n6FbBGEfWM']
+const subscriptions = ['QmbBw8wZ379ksyAETJMFU2BptByeQoGPp1UrBPJdRN2dRc', 'QmcZt6n1KVPC4exrHtDW1R6U7MacGD92MQCUEpYVDq1GXL']
 
 let instance
 let lastPub
 let notificationBody
 
-const frequency = 30 * 1000 // 30 seconds 
+const frequency = 5 * 60 * 1000 // 5 minutes 
 const timeThreshold = 4 * 60 * 60 * 1000 // 4 hours
 const toNumber = phoneNumbers.toNumber
 const fromNumber = phoneNumbers.fromNumber
