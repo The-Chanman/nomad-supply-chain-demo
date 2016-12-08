@@ -22,8 +22,8 @@ const defaultPublishData = {
     description: "The type of animal in region 2"
   }
 }
-const timeBetween = 30 * 1000 //30 seconds
-const timeThreshold = 4 * 60 * 60 * 1000 // 4 minutes
+const timeBetween = 5 * 60 * 1000 //5 minutes
+const timeThreshold = 4 * 60 * 60 * 1000 // 4 hours
 
 class DataMaintainer {
   constructor(){
