@@ -22,8 +22,8 @@ const defaultPublishData = {
     description: "The state of the machine in region 1"
   }
 }
-const timeBetween = 10 * 1000 //15 minutes
-const timeThreshold = 4 * 60 * 60 * 1000 // 4 minutes
+const timeBetween = 30 * 1000 //30 seconds
+const timeThreshold = 4 * 60 * 60 * 1000 // 4 hours
 
 class DataMaintainer {
   constructor(){
@@ -47,7 +47,7 @@ class DataMaintainer {
     return this.data
   }
   isAllFilled(){
-    return this.data["lever"]["data"] && this.data["lever"]["time"]
+    return this.data["sensor"]["data"] && this.data["sensor"]["time"]
   }
   clear(){
     this.data = defaultPublishData
