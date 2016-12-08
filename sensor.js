@@ -120,7 +120,7 @@ nomad.prepareToPublish()
             .catch(err => console.log(`Error in publishing timeSince>=timeBetween positive state: ${JSON.stringify(err)}`))
           dataManager.clear()
           lastPub = currentTime
-        } else {
+        } else if (dataManager.isAllFilled()) {
           instance.publish(dataManager.toString())
             .catch(err => console.log(`Error in publishing timeSince>=timeBetween negative state: ${JSON.stringify(err)}`))
         }

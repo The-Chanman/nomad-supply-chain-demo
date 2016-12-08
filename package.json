@@ -2,7 +2,7 @@
   "name": "Supply-chain-composite-node",
   "nomadName": "Supply-chain-composite-node",
   "version": "1.0.0",
-  "description": "s a composite node that subscribes to three atomic nodes and then notifies a relevant party using twilio and sms.",
+  "description": " a composite node that subscribes to three atomic nodes and then notifies a relevant party using twilio and sms.",
   "main": "sensor.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
