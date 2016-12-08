@@ -8,21 +8,21 @@ const particle = new Particle()
 const nomad = new Nomad()
 
 // Particle Device Setup
-// Atomic node 1
-const deviceID =  <This needs to be set>
+// Atomic node 2
+const deviceID =  "340050000851353531343431"
 
 let instance = null
 let lastPub = null
 let token
 
 const defaultPublishData = { 
-  lever: {
+  sensor: {
     data: "",
     time: "",
-    description: "The state of the lever in region 2"
+    description: "The type of animal in region 2"
   }
 }
-const timeBetween = 15 * 60 * 1000 //15 minutes
+const timeBetween = 30 * 1000 //30 seconds
 const timeThreshold = 4 * 60 * 60 * 1000 // 4 minutes
 
 class DataMaintainer {
@@ -47,7 +47,7 @@ class DataMaintainer {
     return this.data
   }
   isAllFilled(){
-    return this.data["lever"]["data"] && this.data["lever"]["time"]
+    return this.data["sensor"]["data"] && this.data["sensor"]["time"]
   }
   clear(){
     this.data = defaultPublishData
