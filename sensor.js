@@ -22,7 +22,7 @@ const defaultPublishData = {
     description: "The state of the machine in region 1"
   }
 }
-const timeBetween = 30 * 1000 //30 seconds
+const timeBetween = 5 * 60 * 1000 //30 seconds
 const timeThreshold = 4 * 60 * 60 * 1000 // 4 hours
 
 class DataMaintainer {
